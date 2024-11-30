@@ -18,21 +18,18 @@ local RunService = game:GetService("RunService")
 
 local localPlayer = Players.LocalPlayer
 
--- ฟังก์ชันสร้าง Highlight
 local function createHighlightForPlayer(player)
-    if player == localPlayer then return end -- ข้ามผู้เล่นตัวเอง
+    if player == localPlayer then return end
 
     local character = player.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") then return end
 
-    -- สร้าง Highlight
     local highlight = Instance.new("Highlight")
     highlight.FillColor = Color3.fromRGB(255, 0, 0) -- สีภายใน (แดง)
     highlight.OutlineColor = Color3.fromRGB(255, 255, 255) -- สีขอบ (ขาว)
     highlight.Adornee = character
     highlight.Parent = character
 
-    -- ป้ายชื่อแสดงระยะ
     local billboard = Instance.new("BillboardGui")
     billboard.Size = UDim2.new(5, 0, 2, 0)
     billboard.StudsOffset = Vector3.new(0, 3, 0)
@@ -47,22 +44,20 @@ local function createHighlightForPlayer(player)
     textLabel.Font = Enum.Font.SourceSansBold
     textLabel.Parent = billboard
 
-    -- อัปเดตระยะห่างในแต่ละเฟรม
     RunService.RenderStepped:Connect(function()
         if character and character:FindFirstChild("HumanoidRootPart") and localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart") then
             local distance = (character.HumanoidRootPart.Position - localPlayer.Character.HumanoidRootPart.Position).Magnitude
-            textLabel.Text = player.Name .. " | ระยะ: " .. math.floor(distance) .. " studs"
+            textLabel.Text = player.Name .. " |Distance: " .. math.floor(distance) .. " studs"
         else
-            billboard:Destroy() -- ลบออกหากตัวละครหายไป
+            billboard:Destroy()
             highlight:Destroy()
         end
     end)
 end
 
--- อัปเดตเมื่อมีผู้เล่นเข้าหรือออกเกม
 Players.PlayerAdded:Connect(function(player)
     player.CharacterAdded:Connect(function()
-        wait(1) -- รอให้โหลดตัวละคร
+        wait(1)
         createHighlightForPlayer(player)
     end)
 end)

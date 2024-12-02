@@ -222,5 +222,6 @@ end)
 local Section = Tab:NewSection("About")
 
 Section:NewLabel("This script 95% made by chat GPT  ")
+Section:NewLabel("work 50% - 70% not all map can work")
 Section:NewLabel("if you have a FEEDBACK send me in Discord ")
 Section:NewLabel("ID 913084079946219570 ")

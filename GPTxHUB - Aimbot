@@ -1,0 +1,223 @@
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
+local Window = Library.CreateLib("GPTxHUB - AimBot", "Midnight")
+
+-- Tab 1
+local Tab = Window:NewTab("Main")
+
+-- ESP function --
+local Section = Tab:NewSection("Esp and Aimlock")
+
+local Players = game:GetService("Players")
+local espEnabled = false
+
+-- Function to enable ESP
+local function enableESP()
+    espEnabled = true
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player.Character and player ~= Players.LocalPlayer then
+            local character = player.Character
+            local highlight = Instance.new("Highlight")
+            highlight.Name = "PlayerESP"
+            highlight.FillColor = player.Team and player.Team.TeamColor.Color or Color3.new(0.5, 0.5, 0.5)
+            highlight.OutlineColor = player.Team and player.Team.TeamColor.Color or Color3.new(0.5, 0.5, 0.5)
+            highlight.Parent = character
+        end
+    end
+end
+
+-- Function to disable ESP
+local function disableESP()
+    espEnabled = false
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player.Character then
+            local highlight = player.Character:FindFirstChild("PlayerESP")
+            if highlight then
+                highlight:Destroy()
+            end
+        end
+    end
+end
+
+-- ShowPlayerName function
+local function createNameTag(player)
+    if not player.Character or not player.Character:FindFirstChild("Head") then
+        return
+    end
+
+    local head = player.Character:FindFirstChild("Head")
+    local existingBillboard = head:FindFirstChild("NameTag")
+    local isNameTagEnabled = true  -- Check if name tag is enabled
+
+    if isNameTagEnabled then
+        if not existingBillboard then
+            local billboard = Instance.new("BillboardGui")
+            billboard.Name = "NameTag"
+            billboard.Size = UDim2.new(0, 70, 0, 30)
+            billboard.StudsOffset = Vector3.new(0, 2, 0)
+            billboard.AlwaysOnTop = true
+            billboard.Parent = head
+
+            local textLabel = Instance.new("TextLabel")
+            textLabel.Size = UDim2.new(1, 0, 0.8, 0)
+            textLabel.Position = UDim2.new(0, 0, 0.1, 0)
+            textLabel.BackgroundTransparency = 1
+            textLabel.Text = player.Name
+            textLabel.TextColor3 = player.Team and player.Team.TeamColor.Color or Color3.new(0.5, 0.5, 0.5)
+            textLabel.Font = Enum.Font.GothamBold
+            textLabel.TextScaled = true
+            textLabel.TextStrokeTransparency = 0.5
+            textLabel.TextStrokeColor3 = Color3.new(1, 1, 1)
+            textLabel.Parent = billboard
+        end
+    else
+        if existingBillboard then
+            existingBillboard:Destroy()
+        end
+    end
+end
+
+-- Player Added
+local function onPlayerAdded(player)
+    player.CharacterAdded:Connect(function()
+        createNameTag(player)
+    end)
+end
+
+Players.PlayerAdded:Connect(onPlayerAdded)
+
+for _, player in ipairs(Players:GetPlayers()) do
+    onPlayerAdded(player)
+end
+
+-- Toggle for ESP
+Section:NewToggle("ESP", "Turn ESP On/Off", function(state)
+    if state then
+        enableESP()
+    else
+        disableESP()
+    end
+end)
+
+-- Aim lock Fov
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local AimbotEnabled = false  -- Default is off
+local TeamCheck = true
+local AimPart = "Head"  -- or change to "Torso", "HumanoidRootPart"
+local FOVRadius = 80
+local MaxDistance = 1000  -- Default Max Distance
+local HoldingRightClick = false
+
+-- Create FOV Circle
+local FOVCircle = Drawing.new("Circle")
+FOVCircle.Radius = FOVRadius
+FOVCircle.Color = Color3.fromRGB(255, 255, 255)
+FOVCircle.Thickness = 1
+FOVCircle.Transparency = 0.7
+FOVCircle.Filled = false
+FOVCircle.Visible = false  -- Hide initially
+
+-- Function to find the closest player to the mouse
+local function GetClosestPlayerToMouse()
+    local closestPlayer = nil
+    local shortestDistance = MaxDistance
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild(AimPart) then
+            if TeamCheck and player.Team == LocalPlayer.Team then
+                continue
+            end
+
+            local character = player.Character
+            local aimPart = character:FindFirstChild(AimPart)
+            if aimPart then
+                local distance = (LocalPlayer.Character.HumanoidRootPart.Position - aimPart.Position).Magnitude
+
+                if distance < shortestDistance then
+                    local screenPos = Camera:WorldToScreenPoint(aimPart.Position)
+                    local mousePos = UserInputService:GetMouseLocation()
+                    local screenDistance = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
+
+                    if screenDistance <= FOVRadius then
+                        closestPlayer = player
+                        shortestDistance = distance
+                    end
+                end
+            end
+        end
+    end
+
+    return closestPlayer
+end
+
+-- Handle Right Click
+UserInputService.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        HoldingRightClick = true
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        HoldingRightClick = false
+    end
+end)
+
+-- Update FOV and Aimlock
+RunService.RenderStepped:Connect(function()
+    FOVCircle.Position = UserInputService:GetMouseLocation()
+
+    if AimbotEnabled then
+        FOVCircle.Visible = true
+        if HoldingRightClick then
+            local target = GetClosestPlayerToMouse()
+            if target and target.Character and target.Character:FindFirstChild(AimPart) then
+                local aimPart = target.Character[AimPart]
+                Camera.CFrame = CFrame.new(Camera.CFrame.Position, aimPart.Position)
+            end
+        end
+    else
+        FOVCircle.Visible = false  -- Hide FOV when aimbot is disabled
+    end
+end)
+
+-- FOV Radius Slider
+Section:NewSlider("FOV Radius", "Adjust the FOV radius", 500, 0, function(s)
+    FOVRadius = s
+    FOVCircle.Radius = FOVRadius
+end)
+
+-- Aimbot Toggle
+Section:NewToggle("Aimbot Toggle", "Enable/Disable Aimbot", function(state)
+    if state then
+        AimbotEnabled = true
+        print("Aimbot Enabled")
+    else
+        AimbotEnabled = false
+        print("Aimbot Disabled")
+    end
+end)
+
+-- Max Distance Textbox
+Section:NewTextBox("Max Distance", "Set the max distance for Aimbot", function(txt)
+    MaxDistance = tonumber(txt) or MaxDistance
+    print("Max Distance set to " .. MaxDistance)
+end)
+
+-- Tab 2
+local Tab = Window:NewTab("Setting")
+local Section = Tab:NewSection("Setting")
+
+-- Toggle UI
+Section:NewKeybind("KeybindText", "ToggleUI", Enum.KeyCode.RightControl, function()
+    Library:ToggleUI()
+end)
+
+local Section = Tab:NewSection("About")
+
+Section:NewLabel("This script 95% made by chat GPT  ")
+Section:NewLabel("if you have a FEEDBACK send me in Discord ")
+Section:NewLabel("ID 913084079946219570 ")
